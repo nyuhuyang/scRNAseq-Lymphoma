@@ -21,7 +21,7 @@ marker.genes <- c("Cdh5","Pecam1","Flt1","Vwf","Plvap","Kdr","EMCN","Car4","ptpr
                   "Itgb1","Vcam1","Icam2","CD72","CD2","KRT19","Epcam","KRT5",
                   "MUC1","SCGB3A2","SCGB1A1","SCGB3A1","SFTPB","FOXJ1","Rpe65",
                   "Rlbp1","Msln","Upk3b","Lrrn4","Pmel","Mlana","MBP","MPZ",
-                  "SLC36A2","P2RX5","MYF5","UCP1","TRIP4","ASCC1")
+                  "SLC36A2","P2RX5","MYF5","UCP1","TRIP4","ASCC1","CD34","PROM1","ABCG2","ATXN1")
 marker.genes <- HumanGenes(DLBCL, marker.genes)
 for(i in 1:(length(marker.genes))) print(paste0(i," ",marker.genes[i]))
 #Endothelial Cells
@@ -60,15 +60,19 @@ RPE <- marker.genes[c(74:79)] #"PMEL"  "MBP"   "MPZ"   "P2RX5" "TRIP4" "ASCC1"
 FeaturePlot(object = DLBCL, 
             features.plot = marker.genes[c(74:79)], min.cutoff = NA, 
             cols.use = c("lightgrey","blue"), pt.size = 0.5)
-
+# Hematopoietic Stem cell
+stem <- marker.genes[c(80:81)] #"ABCG2" "ATXN1"
+FeaturePlot(object = DLBCL, 
+            features.plot = stem, min.cutoff = NA, 
+            cols.use = c("lightgrey","blue"), pt.size = 0.5)
 # The SplitDotPlotGG function can be useful for viewing conserved cell type markers
 # across conditions, showing both the expression level and the percentage of cells
 # in a cluster expressing any given gene. 
 # Here we plot 1-3 strong marker genes for each of our 13 clusters.
 markers.to.plot <- c("IGJ","CREM","IL2RG","SLAMF7","LYZ","S100A9","CD14",
-                     "CD68","MARCO","VMO1","FCGR3A","Itgax",
-                     "FCER1A","CD3D","CD2","NKG7","CCL5","Cd4","CD62L","IL7R","GIMAP5",
-                     "CREM","Foxp3","Cd8a","GNLY","CCL5","KLRD1","CD79A","MS4A1",
+                     "CD68","MARCO","VMO1","FCGR3A","Itgax","FCER1A","CD3D","CD2",
+                     "NKG7","CCL5","Cd4","CD62L","IL7R","GIMAP5","CREM","Cd8a","GNLY",
+                     "CCL5","KLRD1","CD34","PROM1","ABCG2","ATXN1","CD79A","MS4A1",
                      "NME1","CACYBP","Cd19","CREM","MIR155HG","HLA-DQA1","HLA-DQA1",
                      "SELL","GPR183","CD27")
 markers.to.plot <- HumanGenes(DLBCL,markers.to.plot, unique =T)
@@ -83,16 +87,16 @@ old.ident.ids <- 0:12
 new.cluster.ids <- c("0.B cells",
                      "1.B cells",
                      "2.B cells",
-                     "3.T & NK cells",
+                     "3.T cells",
                      "4.B cells",
                      "5.B cells",
                      "6.B cells",
-                     "7.T &\nNK cells",
+                     "7.T cells",
                      "8.myeloid cells",
                      "9.B cells",
-                     "10.B cells",
+                     "10.\nB cells",
                      "11.B cells",
-                     "12.T, pDC & plasma cells")
+                     "12.Unknown")
 
 DLBCL@ident <- plyr::mapvalues(x = DLBCL@ident,
                                     from = old.ident.ids,

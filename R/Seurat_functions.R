@@ -50,8 +50,7 @@ FindAllMarkers.UMI <- function (object, genes.use = NULL, logfc.threshold = 0.25
             if (test.use == "roc") {
                 gde <- subset(x = gde, subset = (myAUC > return.thresh | 
                                                      myAUC < (1 - return.thresh)))
-            }
-            else {
+            } else {
                 gde <- gde[order(gde$p_val, -gde$avg_logFC), 
                            ]
                 gde <- subset(x = gde, subset = p_val < return.thresh)
@@ -160,8 +159,7 @@ FindAllMarkersbyAge<- function(object, genes.use = NULL, logfc.threshold = -Inf,
                 if (test.use == "roc") {
                     gde <- subset(x = gde, subset = (myAUC > return.thresh | 
                                                          myAUC < (1 - return.thresh)))
-                }
-                else {
+                } else {
                     gde <- gde[order(gde$p_val, -gde$avg_logFC), 
                                ]
                     gde <- subset(x = gde, subset = p_val < return.thresh)
@@ -202,8 +200,7 @@ GenePlot.1 <- function (object, gene1, gene2, cell.ids = NULL, col.use = NULL,
         ident.use <- as.factor(x = object@ident[cell.ids])
         if (length(x = col.use) > 1) {
                 col.use <- col.use[as.numeric(x = ident.use)]
-        }
-        else {
+        } else {
                 col.use <- SetIfNull(x = col.use, default = as.numeric(x = ident.use))
         }
         gene.cor <- round(x = cor(x = data.plot$x, y = data.plot$y), 
@@ -214,8 +211,7 @@ GenePlot.1 <- function (object, gene1, gene2, cell.ids = NULL, col.use = NULL,
                                                                                                0), yes = "white", no = color))
                 axes = FALSE
                 col.lab = "white"
-        }
-        else {
+        } else {
                 axes = TRUE
                 col.lab = "black"
         }
@@ -360,14 +356,12 @@ SingleFeaturePlot.1 <- function (object = object, feature = feature, pt.size = 1
         
         if (length(x = cols.use) == 1) {
                 brewer.gran <- brewer.pal.info[cols.use, ]$maxcolors
-        }
-        else {
+        } else {
                 brewer.gran <- length(x = cols.use)
         }
         if (all(data.gene == 0)) {
                 data.cut <- 0
-        }
-        else {
+        } else {
                 data.cut <- as.numeric(x = as.factor(x = cut(x = as.numeric(x = data.gene), 
                                                              breaks = brewer.gran)))
         }
@@ -377,20 +371,17 @@ SingleFeaturePlot.1 <- function (object = object, feature = feature, pt.size = 1
                 if (length(x = cols.use) == 1) {
                         p <- p + geom_point(mapping = aes(color = col), 
                                             size = pt.size, shape = pch.use) + scale_color_brewer(palette = cols.use)
-                }
-                else {
+                } else {
                         p <- p + geom_point(mapping = aes(color = col), 
                                             size = pt.size, shape = pch.use) + scale_color_manual(values = cols.use)
                 }
-        }
-        else {
+        } else {
                 if (all(data.plot$gene == data.plot$gene[1])) {
                         warning(paste0("All cells have the same value of ", 
                                        feature, "."))
                         p <- p + geom_point(color = cols.use[1], size = pt.size, 
                                             shape = pch.use)
-                }
-                else {
+                } else {
                         p <- p + geom_point(mapping = aes(color = gene), 
                                             size = pt.size, shape = pch.use) + scale_color_gradientn(colors = cols.use, 
                                                                                                      guide = guide_colorbar(title = feature))
@@ -401,8 +392,7 @@ SingleFeaturePlot.1 <- function (object = object, feature = feature, pt.size = 1
                                                                        axis.text.x = element_blank(), axis.text.y = element_blank(), 
                                                                        axis.ticks = element_blank(), axis.title.x = element_blank(), 
                                                                        axis.title.y = element_blank())
-        }
-        else {
+        } else {
                 p <- p + labs(title = feature, x = dim.codes[1], y = dim.codes[2])
         }
         if (no.legend) {
@@ -540,22 +530,19 @@ TSNEPlot.3D <- function (object, reduction.use = "tsne", dim.1 = 1, dim.2 = 2, d
         if (do.identify || do.hover) {
                 if (do.bare) {
                         plot.use <- p
-                }
-                else {
+                } else {
                         plot.use <- p3
                 }
                 if (do.hover) {
                         if (is.null(x = data.hover)) {
                                 features.info <- NULL
-                        }
-                        else {
+                        } else {
                                 features.info <- FetchData(object = object, 
                                                            vars.all = data.hover)
                         }
                         return(HoverLocator(plot = plot.use, data.plot = data.plot, 
                                             features.info = features.info, dark.theme = dark.theme))
-                }
-                else if (do.identify) {
+                } else if (do.identify) {
                         return(FeatureLocator(plot = plot.use, data.plot = data.plot, 
                                               dark.theme = dark.theme, ...))
                 }
@@ -563,15 +550,13 @@ TSNEPlot.3D <- function (object, reduction.use = "tsne", dim.1 = 1, dim.2 = 2, d
         if (do.return) {
                 if (do.bare) {
                         return(p)
-                }
-                else {
+                } else {
                         return(p3)
                 }
         }
         if (do.bare) {
                 print(p)
-        }
-        else {
+        } else {
                 print(p3)
         }
 }
