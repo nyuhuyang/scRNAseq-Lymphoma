@@ -3,7 +3,7 @@ library(dplyr)
 source("./R/Seurat_functions.R")
 
 #====== 2.1 identify phenotype for each cluster  ==========================================
-lnames = load(file = "./data/DLBCL_alignment.Rda")
+lnames = load(file = "./data/DLBCL_10_alignment.Rda")
 lnames
 
 # all marker genes 
@@ -121,7 +121,7 @@ freq_table
 
 #====== 2.3 Compare cell type changes across conditions  ==========================================
 # the two patients profiled have very different composition
-lnames = load(file = "./data/DLBCL_alignment.Rda")
+lnames = load(file = "./data/DLBCL_10_alignment.Rda")
 idents <- as.data.frame(table(DLBCL@ident))
 old.ident.ids <- idents$Var1
 new.cluster.ids <- c("0.B cells",
