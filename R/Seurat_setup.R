@@ -5,8 +5,6 @@
 # ######################################################################
 
 library(Seurat)
-library(dplyr)
-source("./R/Seurat_functions.R")
 
 ########################################################################
 #
@@ -23,29 +21,31 @@ source("./R/Seurat_functions.R")
 # mv genes1.tsv genes.tsv
 
 #======1.1 Setup the Seurat objects =========================
-# Load the mouse.eyes dataset
+# Load the DLBCL dataset
 
 # setup Seurat objects since both count matrices have already filtered
 # cells, we do no additional filtering here
 
-samples <- c("IP8672","TR624_M2102")
-projects <- c("EC-RW-4262","EC-RW-4262")
-conditions <- c("primary", "PDX")
+samples <- c("3119PR", "3119T1", "3119T6", "3139PR", "I17_1733", "IP-10927",
+             "IP8672", "TR624_M2102", "TR_619_mouse_2080", "TR_619_mouse_2083")
+projects <- paste0("EC-RW-",c(rep(4311,6),4262,4262,4311,4311))
+conditions <- c("primary", "PDX", "PDX","primary","primary","primary",
+                "primary","PDX","PDX","PDX")
 DLBCL_raw <- list()
 for(i in 1:length(samples)){
   DLBCL_raw[[i]] <- Read10X(data.dir = paste0("./data/",
                               samples[i],"/outs/filtered_gene_bc_matrices/hg19/"))
-  colnames(DLBCL_raw[[i]]) <- paste0(conditions[i],
-                                          "_",colnames(DLBCL_raw[[i]]))
+  colnames(DLBCL_raw[[i]]) <- paste0(samples[i],"_",colnames(DLBCL_raw[[i]])) # Must be samples!
+  rownames(DLBCL_raw[[i]]) <- sub("hg19_","",rownames(DLBCL_raw[[i]]))
 }
 DLBCL_Seurat <- lapply(DLBCL_raw, CreateSeuratObject,
-                            min.cells = 3,
-                            min.genes = 200,
+                            min.cells = 2,
+                            min.genes = 100,
                             project = projects)
 for(i in 1:length(samples)) DLBCL_Seurat[[i]]@meta.data$conditions <- conditions[i]
 DLBCL_Seurat <- lapply(DLBCL_Seurat, FilterCells, 
                             subset.names = "nGene", 
-                            low.thresholds = 500, 
+                            low.thresholds = 100, 
                             high.thresholds = Inf)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, NormalizeData)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, ScaleData)
@@ -54,8 +54,8 @@ DLBCL_Seurat <- lapply(DLBCL_Seurat, FindVariableGenes, do.plot = FALSE)
 # we will take the union of the top 1k variable genes in each dataset for
 # alignment note that we use 1k genes in the manuscript examples, you can
 # try this here with negligible changes to the overall results
-g <- lapply(DLBCL_Seurat, function(x) head(rownames(x@hvg.info), 1000))
-genes.use <- unique(c(g[[1]],g[[2]]))
+g <- lapply(DLBCL_Seurat, function(x) head(rownames(x@hvg.info), 500))
+genes.use <- unique(unlist(g))
 for(i in 1:length(conditions)){
   genes.use <- intersect(genes.use, rownames(DLBCL_Seurat[[i]]@scale.data))
 }
@@ -64,11 +64,13 @@ length(genes.use) # 1/10 of total sample size 16764
 #======1.2 Perform a canonical correlation analysis (CCA) =========================
 # run a canonical correlation analysis to identify common sources
 # of variation between the two datasets.
-DLBCL <- RunCCA(DLBCL_Seurat[[1]],DLBCL_Seurat[[2]],
-                          genes.use = genes.use,
-                          num.cc = 30)
-save(DLBCL, file = "./data/DLBCL_alignment.Rda")
 remove(DLBCL_raw)
+WGCNA::collectGarbage()
+DLBCL <- RunMultiCCA(object.list = DLBCL_Seurat, 
+                          genes.use = genes.use,
+                     niter = 25, num.ccs = 30,
+                     standardize =TRUE)
+save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
 remove(DLBCL_Seurat)
 
 # CCA plot CC1 versus CC2 and look at a violin plot
@@ -93,8 +95,17 @@ PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2,
          genes.print = 10)
 
 
-#======1.3 QC (skip)==================================
+#======1.3 QC ==================================
+# Run rare non-overlapping filtering
+DLBCL <- CalcVarExpRatio(object = DLBCL, reduction.type = "pca",
+                               grouping.var = "conditions", dims.use = 1:15)
+DLBCL <- SubsetData(DLBCL, subset.name = "var.ratio.pca",accept.low = 0.5)
 
+mito.genes <- grep(pattern = "^mt-", x = rownames(x = DLBCL@data), value = TRUE)
+percent.mito <- Matrix::colSums(DLBCL@raw.data[mito.genes, ])/Matrix::colSums(DLBCL@raw.data)
+DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percent.mito")
+DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
+                         vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
 
 #======1.4 align seurat objects =========================
 #Now we align the CCA subspaces, which returns a new dimensional reduction called cca.aligned
@@ -145,6 +156,6 @@ p2 <- TSNEPlot(object = DLBCL.PDX,do.label = TRUE, group.by = "ident",
     theme(text = element_text(size=20),     #larger text including legend title							
           plot.title = element_text(hjust = 0.5)) #title in middle
 plot_grid(p1, p2)
-save(DLBCL, file = "./data/DLBCL_alignment.Rda")
+save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
 remove(DLBCL.PDX)
 remove(DLBCL.primary)
