@@ -27,11 +27,24 @@ library(cowplot)
 # setup Seurat objects since both count matrices have already filtered
 # cells, we do no additional filtering here
 
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD:R/Seurat_setup.R
+>>>>>>> be7e28f4b38f6d7e5659c2f3478410bf014c01f3
 samples <- c("3119T1", "3119T6","I17_1733", "IP-10927",
              "IP8672", "TR624_M2102", "TR_619_mouse_2080", "TR_619_mouse_2083")
 projects <- paste0("EC-RW-",c(rep(4311,4),4262,4262,4311,4311))
 conditions <- c("PDX", "PDX","primary","primary",
+<<<<<<< HEAD
+=======
+=======
+samples <- c("3119PR", "3119T1", "3119T6", "3139PR", "I17_1733", "IP-10927",
+             "IP8672", "TR624_M2102", "TR_619_mouse_2080", "TR_619_mouse_2083")
+projects <- paste0("EC-RW-",c(rep(4311,6),4262,4262,4311,4311))
+conditions <- c("primary", "PDX", "PDX","primary","primary","primary",
+>>>>>>> 9b8169132a35923308ef95843457f2dbd21713a4:R/Seurat_setup.R
+>>>>>>> be7e28f4b38f6d7e5659c2f3478410bf014c01f3
                 "primary","PDX","PDX","PDX")
 DLBCL_raw <- list()
 for(i in 1:length(samples)){
@@ -72,11 +85,22 @@ DLBCL <- RunMultiCCA(object.list = DLBCL_Seurat,
                           genes.use = genes.use,
                      niter = 25, num.ccs = 30,
                      standardize =TRUE)
+<<<<<<< HEAD
 
+=======
+<<<<<<< HEAD:R/Seurat_setup.R
+>>>>>>> be7e28f4b38f6d7e5659c2f3478410bf014c01f3
 #save(DLBCL,genes.use, file = "./data/DLBCL_10_alignment.Rda")
 DLBCL_marged_mat <- as(object = DLBCL@raw.data, "sparseMatrix")
 DLBCL_metadata <- DLBCL@meta.data
 save(DLBCL_marged_mat,DLBCL_metadata,genes.use, file = "./data/DLBCL_8.Rda")
+<<<<<<< HEAD
+=======
+
+=======
+save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
+>>>>>>> 9b8169132a35923308ef95843457f2dbd21713a4:R/Seurat_setup.R
+>>>>>>> be7e28f4b38f6d7e5659c2f3478410bf014c01f3
 remove(DLBCL_Seurat)
 
 # CCA plot CC1 versus CC2 and look at a violin plot
@@ -101,8 +125,16 @@ PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2,
          genes.print = 10)
 
 
+<<<<<<< HEAD
 #======1.3 QC (skip, ~20k cells were removed)==================================
 
+=======
+<<<<<<< HEAD:R/Seurat_setup.R
+#======1.3 QC (skip, ~20k cells were removed)==================================
+=======
+#======1.3 QC ==================================
+>>>>>>> 9b8169132a35923308ef95843457f2dbd21713a4:R/Seurat_setup.R
+>>>>>>> be7e28f4b38f6d7e5659c2f3478410bf014c01f3
 # Run rare non-overlapping filtering
 DLBCL <- CalcVarExpRatio(object = DLBCL, reduction.type = "pca",
                                grouping.var = "conditions", dims.use = 1:15)
