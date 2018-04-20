@@ -41,13 +41,13 @@ for(i in 1:length(samples)){
   rownames(DLBCL_raw[[i]]) <- sub("hg19_","",rownames(DLBCL_raw[[i]]))
 }
 DLBCL_Seurat <- lapply(DLBCL_raw, CreateSeuratObject,
-                            min.cells = 2,
-                            min.genes = 100,
+                            min.cells = 3,
+                            min.genes = 200,
                             project = projects)
 for(i in 1:length(samples)) DLBCL_Seurat[[i]]@meta.data$conditions <- conditions[i]
 DLBCL_Seurat <- lapply(DLBCL_Seurat, FilterCells, 
                             subset.names = "nGene", 
-                            low.thresholds = 100, 
+                            low.thresholds = 500, 
                             high.thresholds = Inf)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, NormalizeData)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, ScaleData)
@@ -56,7 +56,7 @@ DLBCL_Seurat <- lapply(DLBCL_Seurat, FindVariableGenes, do.plot = FALSE)
 # we will take the union of the top 1k variable genes in each dataset for
 # alignment note that we use 1k genes in the manuscript examples, you can
 # try this here with negligible changes to the overall results
-g <- lapply(DLBCL_Seurat, function(x) head(rownames(x@hvg.info), 500))
+g <- lapply(DLBCL_Seurat, function(x) head(rownames(x@hvg.info), 600))
 genes.use <- unique(unlist(g))
 for(i in 1:length(conditions)){
   genes.use <- intersect(genes.use, rownames(DLBCL_Seurat[[i]]@scale.data))
@@ -74,11 +74,10 @@ DLBCL <- RunMultiCCA(object.list = DLBCL_Seurat,
                      standardize =TRUE)
 
 #save(DLBCL,genes.use, file = "./data/DLBCL_10_alignment.Rda")
-DLBCL_marged_mat <- as(object = DLBCL@raw.data, "sparseMatrix")
-DLBCL_metadata <- DLBCL@meta.data
-save(DLBCL_marged_mat,DLBCL_metadata,genes.use, file = "./data/DLBCL_8.Rda")
-save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
-
+save(DLBCL,genes.use, file = "./data/DLBCL_8_alignment.Rda")
+#DLBCL_marged_mat <- as(object = DLBCL@raw.data, "sparseMatrix")
+#DLBCL_metadata <- DLBCL@meta.data
+#save(DLBCL_marged_mat,DLBCL_metadata,genes.use, file = "./data/DLBCL_8.Rda")
 remove(DLBCL_Seurat)
 
 # CCA plot CC1 versus CC2 and look at a violin plot
@@ -105,15 +104,15 @@ PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2,
 #======1.3 QC (skip, ~20k cells were removed)==================================
 
 # Run rare non-overlapping filtering
-DLBCL <- CalcVarExpRatio(object = DLBCL, reduction.type = "pca",
-                               grouping.var = "conditions", dims.use = 1:15)
-DLBCL <- SubsetData(DLBCL, subset.name = "var.ratio.pca",accept.low = 0.5)
+#DLBCL <- CalcVarExpRatio(object = DLBCL, reduction.type = "pca",
+#                               grouping.var = "conditions", dims.use = 1:15)
+#DLBCL <- SubsetData(DLBCL, subset.name = "var.ratio.pca",accept.low = 0.5)
 
-mito.genes <- grep(pattern = "^mt-", x = rownames(x = DLBCL@data), value = TRUE)
-percent.mito <- Matrix::colSums(DLBCL@raw.data[mito.genes, ])/Matrix::colSums(DLBCL@raw.data)
-DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percent.mito")
-DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
-                         vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
+#mito.genes <- grep(pattern = "^mt-", x = rownames(x = DLBCL@data), value = TRUE)
+#percent.mito <- Matrix::colSums(DLBCL@raw.data[mito.genes, ])/Matrix::colSums(DLBCL@raw.data)
+#DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percent.mito")
+#DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
+#                         vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
 
 #======1.4 align seurat objects (skip, memory overflow)=========================
 #Now we align the CCA subspaces, which returns a new dimensional reduction called cca.aligned
