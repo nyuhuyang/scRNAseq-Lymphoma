@@ -5,6 +5,7 @@
 # ######################################################################
 
 library(Seurat)
+library(cowplot)
 
 ########################################################################
 #
@@ -26,10 +27,10 @@ library(Seurat)
 # setup Seurat objects since both count matrices have already filtered
 # cells, we do no additional filtering here
 
-samples <- c("3119PR", "3119T1", "3119T6", "3139PR", "I17_1733", "IP-10927",
+samples <- c("3119T1", "3119T6","I17_1733", "IP-10927",
              "IP8672", "TR624_M2102", "TR_619_mouse_2080", "TR_619_mouse_2083")
-projects <- paste0("EC-RW-",c(rep(4311,6),4262,4262,4311,4311))
-conditions <- c("primary", "PDX", "PDX","primary","primary","primary",
+projects <- paste0("EC-RW-",c(rep(4311,4),4262,4262,4311,4311))
+conditions <- c("PDX", "PDX","primary","primary",
                 "primary","PDX","PDX","PDX")
 DLBCL_raw <- list()
 for(i in 1:length(samples)){
@@ -70,8 +71,13 @@ DLBCL <- RunMultiCCA(object.list = DLBCL_Seurat,
                           genes.use = genes.use,
                      niter = 25, num.ccs = 30,
                      standardize =TRUE)
-save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
+#save(DLBCL,genes.use, file = "./data/DLBCL_10_alignment.Rda")
+DLBCL_marged_mat <- as(object = DLBCL@raw.data, "sparseMatrix")
+DLBCL_metadata <- DLBCL@meta.data
+save(DLBCL_marged_mat,DLBCL_metadata,genes.use, file = "./data/DLBCL_8.Rda")
+
 remove(DLBCL_Seurat)
+remove(DLBCL)
 
 # CCA plot CC1 versus CC2 and look at a violin plot
 p1 <- DimPlot(object = DLBCL, reduction.use = "cca", group.by = "conditions", 
@@ -82,9 +88,9 @@ plot_grid(p1, p2)
 
 PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2, genes.print = 10)
 
-p3 <- MetageneBicorPlot(DLBCL, grouping.var = "conditions", dims.eval = 1:30, 
-                        display.progress = FALSE)
-p3 + geom_smooth(method = 'loess')
+#p3 <- MetageneBicorPlot(DLBCL, grouping.var = "conditions", dims.eval = 1:30, 
+#                        display.progress = FALSE)
+#p3 + geom_smooth(method = 'loess')
 DimHeatmap(object = DLBCL, reduction.type = "cca", cells.use = 500, dim.use = 1:9, 
            do.balanced = TRUE)
 
@@ -95,7 +101,7 @@ PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2,
          genes.print = 10)
 
 
-#======1.3 QC ==================================
+#======1.3 QC (skip, ~20k cells were removed)==================================
 # Run rare non-overlapping filtering
 DLBCL <- CalcVarExpRatio(object = DLBCL, reduction.type = "pca",
                                grouping.var = "conditions", dims.use = 1:15)
@@ -107,19 +113,52 @@ DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percen
 DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
                          vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
 
-#======1.4 align seurat objects =========================
+#======1.4 align seurat objects (skip, memory overflow)=========================
 #Now we align the CCA subspaces, which returns a new dimensional reduction called cca.aligned
 
 DLBCL <- AlignSubspace(object = DLBCL, reduction.type = "cca", grouping.var = "conditions", 
                             dims.align = 1:20)
 #Now we can run a single integrated analysis on all cells!
 DLBCL <- RunTSNE(object = DLBCL, reduction.use = "cca.aligned", dims.use = 1:20, do.fast = TRUE)
-DLBCL <- FindClusters(object = DLBCL, reduction.type = "cca.aligned", dims.use = 1:20, 
-                      resolution = 0.8, force.recalc = T, save.SNN = TRUE)
-p1 <- TSNEPlot(DLBCL, do.return = T, pt.size = 1, group.by = "conditions")
-p2 <- TSNEPlot(DLBCL, do.label = F, do.return = T, pt.size = 1)
+DLBCL <- FindClusters(object = DLBCL, reduction.type = "cca.aligned", dims.use = 1:20,
+                    resolution = 0.8, force.recalc = T, save.SNN = TRUE,
+                    n.start = 10, nn.eps = 0.5, print.output = FALSE)
+
+
+
+#======1.5 generate seurat objects from Sparse matrix =========================
+lnames = load(file = "./data/DLBCL_10.Rda")
+lnames
+DLBCL <- CreateSeuratObject(raw.data = DLBCL_marged_mat, meta.data = DLBCL_metadata,
+                            min.cells = 3,min.genes = 200,names.delim = ".",
+                            project = "EC-RW-4311_4262")
+DLBCL <- NormalizeData(object = DLBCL, normalization.method = "LogNormalize", scale.factor = 10000)
+mito.genes <- grep(pattern = "^MT", x = rownames(x = DLBCL@data), value = TRUE)
+percent.mito <- Matrix::colSums(DLBCL@raw.data[mito.genes, ])/Matrix::colSums(DLBCL@raw.data)
+DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percent.mito")
+DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
+                 vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
+DLBCL <- RunPCA(object = DLBCL, pc.genes = genes.use, pcs.compute = 100, do.print = TRUE, 
+              pcs.print = 1:5, genes.print = 5)
+PCElbowPlot(object = DLBCL, num.pc = 100)
+PCHeatmap(DLBCL, pc.use = c(1:3, 70:75), cells.use = 500, do.balanced = TRUE)
+DLBCL <- FindClusters(object = DLBCL, reduction.type = "pca", dims.use = 1:75, resolution = 3, 
+                    save.SNN = TRUE, n.start = 10, nn.eps = 0.5, print.output = FALSE)
+WGCNA::collectGarbage()
+DLBCL <- RunTSNE(object = DLBCL, reduction.use = "pca", dims.use = 1:75, tsne.method = "FIt-SNE", 
+               nthreads = 4, reduction.name = "FItSNE", reduction.key = "FItSNE_", 
+               fast_tsne_path = "/Users/yah2014/src/FIt-SNE/bin/fast_tsne", 
+               max_iter = 2000)
+
+p1 <- DimPlot(object = DLBCL, reduction.use = "FItSNE", no.legend = F, do.return = TRUE, 
+              group.by = "orig.ident",
+              vector.friendly = TRUE, pt.size = 0.1) + ggtitle("Cluster ID") + theme(plot.title = element_text(hjust = 0.5))
+p2 <- DimPlot(object = DLBCL, reduction.use = "FItSNE", no.legend = F, group.by = "conditions", 
+              do.return = TRUE, vector.friendly = TRUE, pt.size = 0.1) + ggtitle("Tissue") + 
+        theme(plot.title = element_text(hjust = 0.5))
 
 plot_grid(p1, p2)
+save(DLBCL_marged_mat,DLBCL_metadata,genes.use,DLBCL, file = "./data/DLBCL_10.Rda")
 
 
 #Now, we annotate the clusters as before based on canonical markers.
