@@ -6,7 +6,7 @@
 
 library(Seurat)
 library(cowplot)
-
+source("./R/Seurat_functions.R")
 ########################################################################
 #
 #  1 Seurat Alignment 
@@ -34,20 +34,20 @@ projects <- paste0("EC-RW-",c(rep(4311,4),4262,4262,4311,4311))
 conditions <- c("PDX", "PDX","primary","primary",
                 "primary","PDX","PDX","PDX")
 DLBCL_raw <- list()
+DLBCL_Seurat <- list()
 for(i in 1:length(samples)){
   DLBCL_raw[[i]] <- Read10X(data.dir = paste0("./data/",
                               samples[i],"/outs/filtered_gene_bc_matrices/hg19/"))
   colnames(DLBCL_raw[[i]]) <- paste0(samples[i],"_",colnames(DLBCL_raw[[i]])) # Must be samples!
   rownames(DLBCL_raw[[i]]) <- sub("hg19_","",rownames(DLBCL_raw[[i]]))
+  DLBCL_Seurat[[i]] <- CreateSeuratObject(DLBCL_raw[[i]],min.cells = 3,
+                                          min.genes = 200, project = projects[i],
+                                          names.delim = ".")
+  DLBCL_Seurat[[i]]@meta.data$conditions <- conditions[i]
 }
-DLBCL_Seurat <- lapply(DLBCL_raw, CreateSeuratObject,
-                            min.cells = 3,
-                            min.genes = 200,
-                            project = projects)
-for(i in 1:length(samples)) DLBCL_Seurat[[i]]@meta.data$conditions <- conditions[i]
 DLBCL_Seurat <- lapply(DLBCL_Seurat, FilterCells, 
                             subset.names = "nGene", 
-                            low.thresholds = 500, 
+                            low.thresholds = 500,
                             high.thresholds = Inf)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, NormalizeData)
 DLBCL_Seurat <- lapply(DLBCL_Seurat, ScaleData)
@@ -89,9 +89,9 @@ plot_grid(p1, p2)
 
 PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2, genes.print = 10)
 
-#p3 <- MetageneBicorPlot(DLBCL, grouping.var = "conditions", dims.eval = 1:30, 
-#                        display.progress = FALSE)
-#p3 + geom_smooth(method = 'loess')
+p3 <- MetageneBicorPlot(DLBCL, grouping.var = "conditions", dims.eval = 1:30, 
+                        display.progress = FALSE) # run on cluster
+p3 + geom_smooth(method = 'loess')
 DimHeatmap(object = DLBCL, reduction.type = "cca", cells.use = 500, dim.use = 1:9, 
            do.balanced = TRUE)
 
@@ -114,8 +114,11 @@ PrintDim(object = DLBCL, reduction.type = "cca", dims.print = 1:2,
 #DLBCL <- ScaleData(object = DLBCL, genes.use = genes.use, display.progress = FALSE, 
 #                         vars.to.regress = "percent.mito", do.par = TRUE, num.cores = 4)
 
-#======1.4 align seurat objects (skip, memory overflow)=========================
+#======1.4 align seurat objects (memory overflow, run in cluster with 300G memory)=========================
 #Now we align the CCA subspaces, which returns a new dimensional reduction called cca.aligned
+pwd <- "/home/yah2014/Dropbox/Public/Olivier/R/scRNAseq-Lymphoma/"
+lnames = load(file = paste0(pwd,"/data/DLBCL_8_alignment.Rda"))
+lnames
 
 DLBCL <- AlignSubspace(object = DLBCL, reduction.type = "cca", grouping.var = "conditions", 
                             dims.align = 1:20)
@@ -124,16 +127,17 @@ DLBCL <- RunTSNE(object = DLBCL, reduction.use = "cca.aligned", dims.use = 1:20,
 DLBCL <- FindClusters(object = DLBCL, reduction.type = "cca.aligned", dims.use = 1:20,
                     resolution = 0.8, force.recalc = T, save.SNN = TRUE,
                     n.start = 10, nn.eps = 0.5, print.output = FALSE)
+DLBCL <- StashIdent(object = DLBCL, save.name = "ClusterNames_0.8")
+DLBCL <- FindVariableGenes(object = DLBCL, mean.function = ExpMean, dispersion.function = LogVMR, 
+                         do.plot = FALSE)
+genes.use <- head(rownames(DLBCL@hvg.info), 1000)
 
-
-
+save(DLBCL,genes.use, file = paste0(pwd,"/data/DLBCL_8_alignment.Rda"))
 #======1.5 generate seurat objects from Sparse matrix =========================
-lnames = load(file = "./data/DLBCL_10.Rda")
+lnames = load(file = "./data/DLBCL_8_alignment.Rda")
 lnames
-DLBCL <- CreateSeuratObject(raw.data = DLBCL_marged_mat, meta.data = DLBCL_metadata,
-                            min.cells = 3,min.genes = 200,names.delim = ".",
-                            project = "EC-RW-4311_4262")
-DLBCL <- NormalizeData(object = DLBCL, normalization.method = "LogNormalize", scale.factor = 10000)
+SplitTSNEPlot(DLBCL)
+
 mito.genes <- grep(pattern = "^MT", x = rownames(x = DLBCL@data), value = TRUE)
 percent.mito <- Matrix::colSums(DLBCL@raw.data[mito.genes, ])/Matrix::colSums(DLBCL@raw.data)
 DLBCL <- AddMetaData(object = DLBCL, metadata = percent.mito, col.name = "percent.mito")
@@ -153,49 +157,36 @@ DLBCL <- RunTSNE(object = DLBCL, reduction.use = "pca", dims.use = 1:75, tsne.me
 
 p1 <- DimPlot(object = DLBCL, reduction.use = "FItSNE", no.legend = F, do.return = TRUE, 
               group.by = "orig.ident",
-              vector.friendly = TRUE, pt.size = 0.1) + ggtitle("Cluster ID") + theme(plot.title = element_text(hjust = 0.5))
+              vector.friendly = F, pt.size = 1) + ggtitle("Sample ID") + theme(plot.title = element_text(hjust = 0.5))
 p2 <- DimPlot(object = DLBCL, reduction.use = "FItSNE", no.legend = F, group.by = "conditions", 
-              do.return = TRUE, vector.friendly = TRUE, pt.size = 0.1) + ggtitle("Tissue") + 
-        theme(plot.title = element_text(hjust = 0.5))
-
+              do.return = TRUE, vector.friendly = F, pt.size = 1) + ggtitle("Sample types") + 
+        theme(plot.title = element_text(hjust = 0.5)) # vector.friendly
 plot_grid(p1, p2)
-save(DLBCL_marged_mat,DLBCL_metadata,genes.use,DLBCL, file = "./data/DLBCL_10.Rda")
 
+DLBCL <- StashIdent(object = DLBCL, save.name = "ClusterNames_3")
+DLBCL.meta.data <- DLBCL@meta.data
+save(DLBCL,genes.use, file = "./data/DLBCL_8.Rda")
+save(DLBCL.meta.data,file= "./data/DLBCL_8.metadata.Rda")
 
-#Now, we annotate the clusters as before based on canonical markers.
+#====1.6 correct orig.ident ====
+# during CreateSeuratObject, names.delim = "_" incorrectly recorded wrong orig.ident
+lnames = load(file = "./data/DLBCL_8.Rda")
+lnames
+lnames = load(file = "./data/DLBCL_8.metadata.Rda")
 
-TSNEPlot(object = DLBCL,do.label = TRUE, group.by = "ident", 
-         do.return = TRUE, no.legend = TRUE,
-         pt.size = 1,label.size = 8 )+
-  ggtitle("TSNE plot of all clusters")+
-  theme(text = element_text(size=20),     #larger text including legend title							
-        plot.title = element_text(hjust = 0.5)) #title in middle
-
-# Compare clusters for each dataset
-cell.all <- FetchData(DLBCL,"conditions")
-cell.primary <- rownames(cell.all)[cell.all$conditions =="primary"]
-cell.PDX <- rownames(cell.all)[cell.all$conditions =="PDX"]
-
-DLBCL.primary <- SubsetData(object = DLBCL,
-                               cells.use =cell.primary)
-DLBCL.PDX <- SubsetData(object = DLBCL,
-                              cells.use =cell.PDX)
-table(DLBCL.primary@ident)
-table(DLBCL.PDX@ident)
-p1 <- TSNEPlot(object = DLBCL.primary,do.label = TRUE, group.by = "ident", 
-         do.return = TRUE, no.legend = TRUE,
-         pt.size = 1,label.size = 8 )+
-    ggtitle("Primary sample")+
-    theme(text = element_text(size=20),     #larger text including legend title							
-          plot.title = element_text(hjust = 0.5)) #title in middle
-
-p2 <- TSNEPlot(object = DLBCL.PDX,do.label = TRUE, group.by = "ident", 
-               do.return = TRUE, no.legend = TRUE,
-               pt.size = 1,label.size = 8 )+
-    ggtitle("PDX sample")+
-    theme(text = element_text(size=20),     #larger text including legend title							
-          plot.title = element_text(hjust = 0.5)) #title in middle
+DLBCL.meta.data[grepl("TR_619_mouse_2080",rownames(DLBCL.meta.data)),
+                "orig.ident"] <- "TR_619_mouse_2080"
+DLBCL.meta.data[grepl("TR_619_mouse_2083",rownames(DLBCL.meta.data)),
+                "orig.ident"] <- "TR_619_mouse_2083"
+DLBCL.meta.data[grepl("I17_1733",rownames(DLBCL.meta.data)),
+                "orig.ident"] <- "I17_1733"
+table(DLBCL.meta.data$orig.ident)
+DLBCL@meta.data$orig.ident <- DLBCL.meta.data$orig.ident
+save(DLBCL,genes.use, file = "./data/DLBCL_8.Rda")
+p1 <- DimPlot(object = DLBCL, reduction.use = "tsne", no.legend = F, do.return = TRUE, 
+              group.by = "orig.ident",
+              vector.friendly = F, pt.size = 1) + ggtitle("Sample ID") + theme(plot.title = element_text(hjust = 0.5))
+p2 <- DimPlot(object = DLBCL, reduction.use = "tsne", no.legend = F, group.by = "conditions", 
+              do.return = TRUE, vector.friendly = F, pt.size = 1) + ggtitle("Sample types") + 
+        theme(plot.title = element_text(hjust = 0.5)) # vector.friendly
 plot_grid(p1, p2)
-save(DLBCL, file = "./data/DLBCL_10_alignment.Rda")
-remove(DLBCL.PDX)
-remove(DLBCL.primary)
