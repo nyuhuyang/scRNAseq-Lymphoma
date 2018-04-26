@@ -405,6 +405,73 @@ SingleFeaturePlot.1 <- function (object = object, feature = feature, pt.size = 1
 }
 
 
+SplitCells <- function(object = mouse_eyes, split.by = "conditions"){
+        "
+        split seurat object by certein criteria
+        
+        Inputs
+        -------------------
+        object: aligned seurat object with labels at object@meta.data$
+        split.by: the criteria to split
+        range: number of output plots, default is all of them.
+        return.data: TRUE/FASLE, return splited ojbect or not.
+        
+        Outputs
+        --------------------
+        object.subsets: list of subseted object by certein conditions,
+        plus levels of the conditions
+        
+        "
+        cell.all <- FetchData(object,split.by)
+        conditions <- levels(cell.all[,1])
+        cell.subsets <- lapply(conditions, function(x) 
+                rownames(cell.all)[cell.all$conditions == x])
+        
+        object.subsets <- list()
+        for(i in 1:length(conditions)){
+                object.subsets[[i]] <- SubsetData(object, cells.use =cell.subsets[[i]])
+        }
+        object.subsets[[i+1]] <- conditions # record conditions in the last return
+        return(object.subsets)
+}
+
+
+SplitTSNEPlot <- function(object = mouse_eyes, split.by = "conditions",
+                          range = NULL, return.data = FALSE){
+        "
+        split seurat object by certein criteria, and generate TSNE plot
+        
+        Inputs
+        -------------------
+        object: aligned seurat object with labels at object@meta.data$
+        split.by: the criteria to split
+        range: number of output plots, default is all of them.
+        return.data: TRUE/FASLE, return splited ojbect or not.
+        
+        Outputs
+        --------------------
+        none: print TSNEplot
+        "
+        object.subsets <- SplitCells(object = object, split.by = split.by)
+        conditions <- object.subsets[[length(object.subsets)]] # levels of conditions
+        
+        p <- list()
+        if(is.null(range)) range <- length(conditions)
+        for(i in 1:range){ 
+                p[[i]] <- TSNEPlot(object = object.subsets[[i]],
+                                   do.label = T, group.by = "ident", 
+                                   do.return = TRUE, no.legend = TRUE,
+                                   pt.size = 1,label.size = 5 )+
+                        ggtitle(conditions[i])+
+                        theme(text = element_text(size=20),     #larger text including legend title							
+                              plot.title = element_text(hjust = 0.5)) #title in middle
+        }
+        print(do.call(plot_grid, p))
+        if(return.data) return(object.subsets)
+}
+
+
+
 
 # split by ages and TSNEPlot
 TSNEPlotbyAges <- function(object =object){

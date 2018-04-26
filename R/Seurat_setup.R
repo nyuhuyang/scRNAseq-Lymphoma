@@ -166,7 +166,7 @@ plot_grid(p1, p2)
 DLBCL <- StashIdent(object = DLBCL, save.name = "ClusterNames_3")
 DLBCL.meta.data <- DLBCL@meta.data
 save(DLBCL,genes.use, file = "./data/DLBCL_8.Rda")
-save(DLBCL.meta.data,file= "./data/DLBCL_8.metadata.Rda")
+save(DLBCL.meta.data,p3,file= "./data/DLBCL_8.metadata.Rda")
 
 #====1.6 correct orig.ident ====
 # during CreateSeuratObject, names.delim = "_" incorrectly recorded wrong orig.ident
