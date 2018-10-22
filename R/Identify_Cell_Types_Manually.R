@@ -43,7 +43,7 @@ T_Cell <- HumanGenes(DLBCL,c("CD3G","CD3D","CD2","CD8A","IL2RA",
 CD4_Naive_T <- HumanGenes(DLBCL,c("CD4","IL7R","GIMAP5","SELL","IL2RG"))
 NK <- HumanGenes(DLBCL,c("NKG7","CCL5"))
 # B cell
-B_StemCell <- HumanGenes(DLBCL,"SPN")
+B_StemCell <- HumanGenes(DLBCL,c("SPN","CD20"))
 Pre_Pro_B <- HumanGenes(DLBCL,c("CD34","MME","CD38"))
 Pro_B <- HumanGenes(DLBCL,c("MME","CD19","SPN","CD38","CD24","IL7","IL3RA"))
 Pre_B <- HumanGenes(DLBCL,c("MME","CD19","MS4A1","CD24","CD38","IL7","IL3RA","IL4R"))
@@ -110,14 +110,13 @@ Featureplot(Stem_cell)
 Featureplot(Stromal_fibroblasts)
 Featureplot(Neurons)
 
-markers.to.plot <- c()
 markers.to.plot <- c(Stem_cell[c(5,6)],Monocytes[1:3],Macrophages,erythrocyte,T_Cell[1:3],NK,
                      CD4_Naive_T[1:3],B_StemCell,Pro_B,Pre_B,Immature_B, Transitional_B,
                      Activated_B,Follicular_B,Germinal_center_B,
                      Plasma_blast,Plasma_cell_long_lived,Memory_B)
 markers.to.plot <- c("RUNX1","ATXN1","LYZ","S100A9","CD14","CD68","VMO1","MARCO","EMR1","HBA2",
                      "HBB","CD3G","CD3D","CD2","NKG7","CCL5","CD4","IL7R","GIMAP5",
-                     "CD19","CD38","MS4A1","CD27","IL4R",
+                     "CD19","CD20","CD38","MS4A1","CD27","IL4R",
                      "CD40","CD5","IL2RA","CD69","CD80","CD86","FLT3",
                      "CD22","FCER2","HLA-DRB1","HLA-DQB1","HLA-DRA","HLA-DQA1","TNFRSF17",
                      "CXCR4","CXCR5")

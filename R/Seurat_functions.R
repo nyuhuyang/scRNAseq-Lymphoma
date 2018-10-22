@@ -422,14 +422,14 @@ SplitCells <- function(object = mouse_eyes, split.by = "conditions"){
         plus levels of the conditions
         
         "
-        cell.all <- FetchData(object,split.by)
+        cell.all <- Seurat::FetchData(object,split.by)
         conditions <- levels(cell.all[,1])
         cell.subsets <- lapply(conditions, function(x) 
                 rownames(cell.all)[cell.all$conditions == x])
         
         object.subsets <- list()
         for(i in 1:length(conditions)){
-                object.subsets[[i]] <- SubsetData(object, cells.use =cell.subsets[[i]])
+                object.subsets[[i]] <- Seurat::SubsetData(object, cells.use =cell.subsets[[i]])
         }
         object.subsets[[i+1]] <- conditions # record conditions in the last return
         return(object.subsets)
@@ -629,4 +629,9 @@ TSNEPlot.3D <- function (object, reduction.use = "tsne", dim.1 = 1, dim.2 = 2, d
 }
 
 #=====Clean memory======================
-#WGCNA::collectGarbage()
+GC <- function()
+{
+        while (gc()[2, 4] != gc()[2, 4] | gc()[1, 4] != gc()[1, 
+                                                             4]) {
+        }
+}
