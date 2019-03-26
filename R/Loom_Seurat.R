@@ -1,9 +1,11 @@
 #library(Seurat)
 library(ggplot2)
 source("./R/Seurat_functions.R")
-
+library(Seurat)
 #====== 6.1 load seurat  ==========================================
-lnames = load(file = "./data/DLBCL_8.Rda")
+lnames = load(file = "./data/DLBCL_8_alignment.Rda")
+head(DLBCL@meta.data)
+table(DLBCL@meta.data$orig.ident)
 lnames
 DLBCL.subsets <- SplitCells(DLBCL)
 DLBCL.subsets[[3]]
